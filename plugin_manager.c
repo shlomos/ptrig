@@ -32,9 +32,9 @@ static int load_plugin(struct plugin_manager *mgr, char* path)
 	void *plugin_handle;
 	struct plugin_node* plugin_node;
 
-	plugin_node = malloc(sizeof(*plugin_node));
+	plugin_node = calloc(1, sizeof(*plugin_node));
 	if (!plugin_node) {
-		fprintf(stderr, "%m\n");
+		fprintf(stderr, "malloc plugin_node: %m\n");
 		goto load_error;
 	}
 
@@ -64,13 +64,13 @@ load_error:
 
 struct plugin_manager* load_plugins(const char *path)
 {
-	DIR *root;
+	DIR *root = NULL;
 	struct plugin_manager *handle = NULL;
-	struct dirent *dir;
-	char full_path[PATH_MAX];
-	char *dot;
+	struct dirent *dir = NULL;
+	char full_path[PATH_MAX] = {0};
+	char *dot = NULL;
 
-	handle = malloc(sizeof(*handle));
+	handle = calloc(1, sizeof(*handle));
 	if (!handle) {
 		fprintf(stderr, "plugin_manager malloc failed: %m\n");
 		goto allocation_error;
