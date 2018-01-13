@@ -20,6 +20,7 @@ struct plugin {
 
 struct plugin_node {
 	struct plugin *plugin;
+	void *dl_handle;
 	struct list_head list;
 };
 

@@ -18,7 +18,6 @@ int main(int argc, char **argv)
 	struct trigger trigger;
 	trigger.initial_num = 10;
 	strncpy(trigger.args.plugins_dir, argv[1], PATH_MAX);
-	printf("%s\n", trigger.args.plugins_dir);
 	register_callback(&trigger, my_callback);
 	run_trigger(&trigger);
 }

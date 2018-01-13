@@ -14,21 +14,44 @@ struct plugin_manager
 	struct plugin_node plugin_node;
 };
 
+void destroy_plugin(struct plugin_node* plugin_node)
+{
+	if (plugin_node) {
+		fprintf(stderr, "destroying plugin '%s'\n",
+				plugin_node->plugin->name);
+		if (plugin_node->dl_handle) {
+			dlclose(plugin_node->dl_handle);
+		}
+		free(plugin_node);
+	}
+}
+
 static int load_plugin(struct plugin_manager *mgr, char* path)
 {
 	int ret = -1;
 	void *plugin_handle;
-	struct plugin_node* plugin_node = malloc(sizeof(*plugin_node));
+	struct plugin_node* plugin_node;
+
+	plugin_node = malloc(sizeof(*plugin_node));
+	if (!plugin_node) {
+		fprintf(stderr, "%m\n");
+		goto load_error;
+	}
 
 	plugin_handle = dlopen(path, RTLD_NOW);
 	if (!plugin_handle) {
 		fprintf(stderr, "%s\n", dlerror());
+		destroy_plugin(plugin_node);
 		goto load_error;
 	}
 	dlerror();
+	
+	plugin_node->dl_handle = plugin_handle;
+	
 	plugin_node->plugin = dlsym(plugin_handle, "trigger_plugin_hooks");
 	if (!plugin_node->plugin)  {
 		fprintf(stderr, "%s\n", dlerror());
+		destroy_plugin(plugin_node);
 		goto load_error;
 	}
 
@@ -49,6 +72,7 @@ struct plugin_manager* load_plugins(const char *path)
 
 	handle = malloc(sizeof(*handle));
 	if (!handle) {
+		fprintf(stderr, "plugin_manager malloc failed: %m\n");
 		goto allocation_error;
 	}
 	strncpy(handle->plugins_dir, path, PATH_MAX);
@@ -93,7 +117,7 @@ int unload_plugins(struct plugin_manager *mgr)
 
 	list_for_each(current, &mgr->plugin_node.list) {
 		curr_plugin = list_entry(current, struct plugin_node, list);
-		free(curr_plugin);
+		destroy_plugin(curr_plugin);
 	}
 
 	free(mgr);
