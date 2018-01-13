@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #include "plugin_manager.h"
 #include "trigger.h"
@@ -12,33 +11,33 @@ void register_callback(struct trigger *trigger, callback_t callback)
 	trigger->callback = callback;
 }
 
-void hooked_callback(u_char* args, int num)
+void hooked_callback(struct trigger *trigger, void* args, void* data)
 {
-	struct trigger *trigger = (struct trigger*)args;
 	struct list_head* current;
 	struct list_head* head = get_plugins_head(trigger->plug_mgr);
  	struct plugin_node* curr_plugin;
  	int skip_later = 0;
-	
+	printf("hello %p, %p\n", trigger, trigger->plug_mgr);
 	//for each pre-hook
 	list_for_each(current, head) {
 		curr_plugin = list_entry(current, struct plugin_node, list);
-		skip_later = curr_plugin->plugin->pre_hook((void*)trigger, num);
+		skip_later = curr_plugin->plugin->pre_hook((void*)trigger, data);
 		if (skip_later) {
 			printf("plugin '%s' pre_hook return skip_later code\n",
 					curr_plugin->plugin->name);
 			break;
 		}
 	}
+	printf("hello1\n");
 	// registered callback
 	if (!skip_later) {
-		trigger->callback(args, num);
+		trigger->callback(args, data);
 	}
 	skip_later = 0;
 	//for each post-hook
 	list_for_each(current, head) {
 		curr_plugin = list_entry(current, struct plugin_node, list);
-		curr_plugin->plugin->post_hook((void*)trigger, num);
+		curr_plugin->plugin->post_hook((void*)trigger, data);
 		if (skip_later) {
 			printf("plugin '%s' post_hook return skip_later code\n",
 					curr_plugin->plugin->name);
@@ -47,9 +46,13 @@ void hooked_callback(u_char* args, int num)
 	}
 }
 
-int loop(struct trigger *trigger)
+void register_loop(struct trigger *trigger, loop_t loop)
 {
-	int i = trigger->initial_num;
+	trigger->loop = loop;
+}
+
+void hooked_loop(struct trigger *trigger, void *args)
+{
 	struct list_head* current;
 	struct list_head* head = get_plugins_head(trigger->plug_mgr);
  	struct plugin_node* curr_plugin;
@@ -60,11 +63,7 @@ int loop(struct trigger *trigger)
 		curr_plugin->plugin->init_hook((void*)trigger);
 	}
 
-	while (true) {
-		sleep(5);
-		hooked_callback((u_char*)trigger, i);
-		i++;
-	}
+	trigger->loop(trigger, args);
 
 	// for each exit-hook
 	list_for_each(current, head) {
@@ -73,7 +72,7 @@ int loop(struct trigger *trigger)
 	}
 }
 
-int run_trigger(struct trigger* trigger)
+int run_trigger(struct trigger* trigger, void *args)
 {
 	int ret = -1;
 
@@ -82,14 +81,11 @@ int run_trigger(struct trigger* trigger)
 		fprintf(stderr, "failed loading plugins\n");
 		goto plugin_error;
 	}
-	if(!loop(trigger)) {
-		fprintf(stderr, "loop failed with error\n");
-		goto loop_error;
-	}
+	hooked_loop(trigger, args);
+
+	unload_plugins(trigger->plug_mgr);
 	ret = 0;
 
-loop_error:
-	unload_plugins(trigger->plug_mgr);
 plugin_error:
 	return ret;
 }

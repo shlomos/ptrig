@@ -14,8 +14,8 @@ struct plugin {
 	char name[MAX_PLUGIN_NAME];
 	int (*init_hook)(void*);
 	int (*exit_hook)(void*);
-	int (*pre_hook)(u_char*, int);
-	int (*post_hook)(u_char*, int);
+	int (*pre_hook)(void*, void*);
+	int (*post_hook)(void*, void*);
 };
 
 struct plugin_node {
