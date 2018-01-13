@@ -43,11 +43,11 @@ void callback(void* priv, int current)
 	hooked_callback(cargs->trigger, priv, (void*)&cdata);
 }
 
-void my_loop(struct trigger* trigger, void* args)
+void my_loop(void* args)
 {
 	struct callback_args *cargs = (struct callback_args*)args;
 
-	black_box_loop(cargs->initial, callback, (void*)&cargs);
+	black_box_loop(cargs->initial, callback, args);
 }
 
 void my_callback(void* args, void* data)
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 	struct trigger trigger;
 	struct callback_args cargs = {.initial = 10, .trigger = &trigger};
 
-	strncpy(trigger.args.plugins_dir, argv[1], PATH_MAX);
+	strncpy(trigger.plugins_dir, argv[1], PATH_MAX);
 	register_callback(&trigger, my_callback);
 	register_loop(&trigger, my_loop);
 	run_trigger(&trigger, (void*)&cargs);
