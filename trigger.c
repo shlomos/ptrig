@@ -21,7 +21,7 @@ void hooked_callback(struct trigger *trigger, void* args, void* data)
 	//for each pre-hook
 	list_for_each(current, head) {
 		curr_plugin = list_entry(current, struct plugin_node, list);
-		skip_later = curr_plugin->plugin->pre_hook((void*)trigger, data);
+		skip_later = curr_plugin->plugin->pre_hook(args, data);
 		if (skip_later) {
 			printf("plugin '%s' pre_hook return skip_later code\n",
 					curr_plugin->plugin->name);
@@ -38,7 +38,7 @@ void hooked_callback(struct trigger *trigger, void* args, void* data)
 	//for each post-hook
 	list_for_each(current, head) {
 		curr_plugin = list_entry(current, struct plugin_node, list);
-		curr_plugin->plugin->post_hook((void*)trigger, data);
+		curr_plugin->plugin->post_hook(args, data);
 		if (skip_later) {
 			printf("plugin '%s' post_hook return skip_later code\n",
 					curr_plugin->plugin->name);
