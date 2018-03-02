@@ -1,5 +1,9 @@
 #include "plugin_manager.h"
 
+struct callback_data {
+	int current;
+};
+
 int init_hook(void* args)
 {
 	printf("hello\n");
@@ -12,25 +16,51 @@ int exit_hook(void* args)
 	return 0;
 }
 
-int pre_hook(u_char* args, int num)
+int each_pre_hook(void* args, void* data)
 {
-	printf("pre_hello_%d\n", num);
-	if (num >= 15){
-		return 1;
-	}
+	struct callback_data *cdata = (struct callback_data*)data;
+
+	printf("pre_hello_%d\n", cdata->current);
 	return 0;
 }
 
-int post_hook(u_char* args, int num)
+int each_post_hook(void* args, void* data)
 {
-	printf("post_hello_%d\n", num);
+	struct callback_data *cdata = (struct callback_data*)data;
+
+	printf("post_hello_%d\n", cdata->current);
 	return 0;
 }
 
-struct plugin trigger_plugin_hooks ={
+int triplets_pre_hook(void* args, void* data)
+{
+	struct callback_data *cdata = (struct callback_data*)data;
+
+	printf("pre_hello_%d\n", cdata->current);
+	return 0;
+}
+
+int triplets_post_hook(void* args, void* data)
+{
+	struct callback_data *cdata = (struct callback_data*)data;
+
+	printf("post_hello_%d\n", cdata->current);
+	return 0;
+}
+
+struct plugin_hook ptrig_each_plugin_hooks = {
+	.pre_hook = each_pre_hook,
+	.post_hook = each_post_hook
+};
+
+struct plugin_hook ptrig_triplets_plugin_hooks = {
+	.pre_hook = triplets_pre_hook,
+	.post_hook = triplets_post_hook
+};
+
+struct plugin ptrig_plugin_hooks = {
 	.name = "hello",
 	.init_hook = init_hook,
 	.exit_hook = exit_hook,
-	.pre_hook = pre_hook,
-	.post_hook = post_hook
+	.hooks = {ptrig_each_plugin_hooks, ptrig_triplets_plugin_hooks}
 };

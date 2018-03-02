@@ -24,15 +24,34 @@ typedef void (*bb_callback_t)(void*, int);
 /*
 * An example loop you cannot change, must use its API
 */
-void black_box_loop(int initial, bb_callback_t cb, void* priv)
+void black_box_loop(int initial, bb_callback_t cb_each, bb_callback_t cb_triplet, void* priv)
 {
 	int i = initial;
 
 	while (true) {
-		cb(priv, i);
+		cb_each(priv, i);
+		if ((i - initial) % 3 == 0) {
+			cb_triplet(priv, i);
+		}
 		i++;
-		sleep(5);
+		sleep(3);
 	}
+}
+
+void each_callback(void* args, void* data)
+{
+	struct callback_args *cargs = (struct callback_args*)args;
+	struct callback_data *cdata = (struct callback_data*)data;
+
+	printf("The number is: %d. We started from: %d\n", cdata->current, cargs->initial);
+}
+
+void triplets_callback(void* args, void* data)
+{
+	struct callback_args *cargs = (struct callback_args*)args;
+	struct callback_data *cdata = (struct callback_data*)data;
+
+	printf("This is triplet number: %d\n", (cdata->current - cargs->initial) / 3);
 }
 
 void callback(void* priv, int current)
@@ -40,7 +59,7 @@ void callback(void* priv, int current)
 	struct callback_data cdata = {.current = current};
 	struct callback_args *cargs = (struct callback_args*)priv;
 
-	hooked_callback(cargs->trigger, priv, (void*)&cdata);
+	hook_callback(cargs->trigger, "", priv, (void*)&cdata);
 }
 
 void my_loop(void* args)
@@ -48,14 +67,6 @@ void my_loop(void* args)
 	struct callback_args *cargs = (struct callback_args*)args;
 
 	black_box_loop(cargs->initial, callback, args);
-}
-
-void my_callback(void* args, void* data)
-{
-	struct callback_args *cargs = (struct callback_args*)args;
-	struct callback_data *cdata = (struct callback_data*)data;
-
-	printf("The number is: %d. We started from: %d\n", cdata->current, cargs->initial);
 }
 
 int main(int argc, char **argv)
@@ -66,7 +77,8 @@ int main(int argc, char **argv)
 	if (argc > 1){
 		strncpy(trigger.plugins_dir, argv[1], PATH_MAX);
 	}
-	register_callback(&trigger, my_callback);
+	register_callback("each", each_callback);
+	register_callback("triplets", triplets_callback);
 	register_loop(&trigger, my_loop);
 	run_trigger(&trigger, (void*)&cargs);
 	return 0;

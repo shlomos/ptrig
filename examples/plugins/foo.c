@@ -32,7 +32,7 @@ int post_hook(void* args, void* data)
 	return 0;
 }
 
-struct plugin trigger_plugin_hooks = {
+struct plugin ptrig_plugin_hooks = {
 	.name = "foo",
 	.init_hook = init_hook,
 	.exit_hook = exit_hook,

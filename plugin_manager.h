@@ -10,12 +10,16 @@
 
 struct plugin_manager;
 
+struct plugin_hook {
+	int (*pre_hook)(void*, void*);
+	int (*post_hook)(void*, void*);
+};
+
 struct plugin {
 	char name[MAX_PLUGIN_NAME];
 	int (*init_hook)(void*);
 	int (*exit_hook)(void*);
-	int (*pre_hook)(void*, void*);
-	int (*post_hook)(void*, void*);
+	struct plugin_hook *hooks;
 };
 
 struct plugin_node {

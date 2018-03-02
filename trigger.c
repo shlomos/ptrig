@@ -6,17 +6,12 @@
 #include "trigger.h"
 #include "list.h"
 
-void register_callback(struct trigger *trigger, callback_t callback)
-{
-	trigger->callback = callback;
-}
-
-void hooked_callback(struct trigger *trigger, void* args, void* data)
+void hook_callback(struct trigger *trigger, callback_t callback, void* args, void* data)
 {
 	struct list_head* current;
 	struct list_head* head = get_plugins_head(trigger->plug_mgr);
- 	struct plugin_node* curr_plugin;
- 	int skip_later = 0;
+	struct plugin_node* curr_plugin;
+	int skip_later = 0;
 
 	//for each pre-hook
 	list_for_each(current, head) {
@@ -31,7 +26,7 @@ void hooked_callback(struct trigger *trigger, void* args, void* data)
 
 	// registered callback
 	if (!skip_later) {
-		trigger->callback(args, data);
+		callback(args, data);
 	}
 	skip_later = 0;
 
@@ -56,8 +51,8 @@ void hooked_loop(struct trigger *trigger, void *args)
 {
 	struct list_head* current;
 	struct list_head* head = get_plugins_head(trigger->plug_mgr);
- 	struct plugin_node* curr_plugin;
-	
+	struct plugin_node* curr_plugin;
+
 	// for each init-hook
 	list_for_each(current, head) {
 		curr_plugin = list_entry(current, struct plugin_node, list);

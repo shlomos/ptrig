@@ -45,9 +45,9 @@ static int load_plugin(struct plugin_manager *mgr, char* path)
 		goto load_error;
 	}
 	dlerror();
-	
+
 	plugin_node->dl_handle = plugin_handle;
-	
+
 	plugin_node->plugin = dlsym(plugin_handle, "trigger_plugin_hooks");
 	if (!plugin_node->plugin)  {
 		fprintf(stderr, "%s\n", dlerror());

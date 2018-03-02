@@ -11,13 +11,10 @@ typedef void (*loop_t)(void*);
 struct trigger {
 	char plugins_dir[PATH_MAX];
 	struct plugin_manager *plug_mgr;
-	callback_t callback;
 	loop_t loop;
 };
 
-void hooked_callback(struct trigger*, void*, void*);
-
-void register_callback(struct trigger*, callback_t);
+void hook_callback(struct trigger *, callback_t, void *, void *);
 
 void register_loop(struct trigger *, loop_t);
 
