@@ -63,11 +63,10 @@ int main(int argc, char **argv)
 	struct trigger trigger;
 	struct callback_args cargs = {.initial = 10, .trigger = &trigger};
 
-	if (argc > 1){
-		strncpy(trigger.plugins_dir, argv[1], PATH_MAX);
-	}
-	register_callback(&trigger, my_callback);
+	init_trigger(&trigger, argc > 1 ? argv[1] : "");
+	register_callback(&trigger, my_callback, "default");
 	register_loop(&trigger, my_loop);
+	signal(SIGINT, clean_exit);
 	run_trigger(&trigger, (void*)&cargs);
 	return 0;
 }
