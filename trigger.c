@@ -12,25 +12,26 @@ void register_callback(struct trigger *trigger, callback_t callback, const char 
 	trigger->callback = callback;
 }
 
-static int run_hooks(struct list_head *head, int pre, void* args, void* data)
+static int run_hooks(struct list_head *head, int post_hook, void* args, void* data)
 {
 	struct module_hooks_node* curr_hook;
 	struct list_head* current;
 	int ret = 0;
 
-	if (head) { 
-		list_for_each(current, head) {
-			curr_hook = list_entry(current, struct module_hooks_node, list);
-			if (pre) {
-				ret = curr_hook->m_hook->pre_hook(args, data);
-			} else {
-				ret = curr_hook->m_hook->post_hook(args, data);
-			}
-			if (ret) {
-				//printf("plugin '%s' pre_hook return skip_later code\n",
-				//		curr_hook->name);
-				goto skip_later;	
-			}
+	/* No modules where registered */
+	if (!head) { 
+		return ret;
+	}
+
+	list_for_each(current, head) {
+		curr_hook = list_entry(current, struct module_hooks_node, list);
+		if (post_hook) {
+			ret = curr_hook->m_hook->post_hook(args, data);
+		} else {
+			ret = curr_hook->m_hook->pre_hook(args, data);
+		}
+		if (ret) {
+			goto skip_later;	
 		}
 	}
 
@@ -43,15 +44,14 @@ void hooked_callback(struct trigger *trigger, void* args, void* data)
 	struct list_head* head = get_module_hooks(trigger->plug_mgr, "default");
  	int skip_later = 0;
 
-	skip_later = run_hooks(head, 1, args, data);
+	skip_later = run_hooks(head, 0, args, data);
 
-	// registered callback
 	if (!skip_later) {
 		trigger->callback(args, data);
 	}
 	skip_later = 0;
 
-	run_hooks(head, 0, args, data);
+	run_hooks(head, 1, args, data);
 }
 
 void register_loop(struct trigger *trigger, loop_t loop)
