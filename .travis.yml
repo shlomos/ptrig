@@ -1,0 +1,13 @@
+language: c
+
+sudo: false
+
+script:
+  - make
+  - make -C examples/
+  - make -C examples/ PLUGIN=foo plugin
+  - make -C examples/ PLUGIN=hello plugin
+
+compiler:
+  - clang
+  - gcc
