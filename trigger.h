@@ -5,21 +5,24 @@
 
 struct trigger;
 
-typedef void (*callback_t)(void*, void*);
-typedef void (*loop_t)(void*);
+typedef int (*callback_t)(void*, void*);
+typedef int (*loop_t)(void*);
 
 struct trigger {
-	char plugins_dir[PATH_MAX];
 	struct plugin_manager *plug_mgr;
-	callback_t callback;
+	struct callbacks_table *callbacks;
 	loop_t loop;
 };
 
-void hooked_callback(struct trigger*, void*, void*);
-
-void register_callback(struct trigger*, callback_t);
+int register_callback(struct trigger *, const char *, callback_t);
 
 void register_loop(struct trigger *, loop_t);
+
+int init_trigger(struct trigger *, const char *path);
+
+int handle_callback(struct trigger *, const char* , void* , void* );
+
+void destory_trigger(struct trigger *);
 
 int run_trigger(struct trigger*, void*);
 

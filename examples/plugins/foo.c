@@ -16,7 +16,7 @@ int exit_hook(void* args)
 	return 0;
 }
 
-int pre_hook(void* args, void* data)
+int pre_default_hook(void* args, void* data)
 {
 	struct callback_data *cdata = (struct callback_data*)data;
 
@@ -24,7 +24,7 @@ int pre_hook(void* args, void* data)
 	return 0;
 }
 
-int post_hook(void* args, void* data)
+int post_default_hook(void* args, void* data)
 {
 	struct callback_data *cdata = (struct callback_data*)data;
 
@@ -32,10 +32,13 @@ int post_hook(void* args, void* data)
 	return 0;
 }
 
-struct plugin trigger_plugin_hooks = {
+struct general_hook ptrig_hooks = {
 	.name = "foo",
 	.init_hook = init_hook,
-	.exit_hook = exit_hook,
-	.pre_hook = pre_hook,
-	.post_hook = post_hook
+	.exit_hook = exit_hook
+};
+
+struct module_hook ptrig_default_hooks = { 
+	.pre_hook = pre_default_hook,
+	.post_hook = post_default_hook
 };
