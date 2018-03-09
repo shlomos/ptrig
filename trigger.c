@@ -39,7 +39,6 @@ static int set_callback(struct trigger *trigger, const char *name, callback_t ca
 	}
 	strncpy(item->name, name, MAX_HOOK_NAME);
 	item->name[MAX_HOOK_NAME - 1] = '\0';
-
 	item->callback = callback;
 
 	/* In the below macro the argument 'name' is the key field in struct*/
@@ -145,6 +144,7 @@ void register_loop(struct trigger *trigger, loop_t loop)
 
 int init_trigger(struct trigger* trigger, const char *path)
 {
+	trigger->callbacks = NULL;
 	trigger->plug_mgr = init_plugin_manager(path);
 	if (!trigger->plug_mgr) {
 		return -1;
