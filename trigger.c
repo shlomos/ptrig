@@ -1,15 +1,51 @@
-#include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
 
 #include "plugin_manager.h"
 #include "trigger.h"
 #include "list.h"
 
-void register_callback(struct trigger *trigger, callback_t callback, const char *name)
+/* Structure that defines a hash table [name]<->[callback]*/
+struct callbacks_table {
+	char name[MAX_HOOK_NAME];
+	callback_t callback;
+	UT_hash_handle hh;
+};
+
+static callback_t get_callback(struct trigger *trigger, const char *name)
 {
-	register_module(trigger->plug_mgr, name);
-	trigger->callback = callback;
+	struct callbacks_table *item;
+
+	HASH_FIND_STR(trigger->callbacks, name, item);
+	if (!item) {
+		return NULL;
+	}
+	return item->callback;
+}
+
+static int set_callback(struct trigger *trigger, const char *name, callback_t callback)
+{
+	struct callbacks_table *item;
+
+	if (get_callback(trigger, name)) {
+		return EEXIST;
+	}
+	item = (struct callbacks_table *)calloc(1, sizeof(struct callbacks_table));
+	if (!item) {
+		fprintf(stderr, "malloc callbacks_table: %m\n");
+		return errno;
+	}
+	strncpy(item->name, name, MAX_HOOK_NAME);
+	item->name[MAX_HOOK_NAME - 1] = '\0';
+
+	item->callback = callback;
+
+	/* In the below macro the argument 'name' is the key field in struct*/
+	HASH_ADD_STR(trigger->callbacks, name, item);
+
+	return 0;
 }
 
 static int run_hooks(struct list_head *head, int post_hook, void* args, void* data)
@@ -20,7 +56,7 @@ static int run_hooks(struct list_head *head, int post_hook, void* args, void* da
 
 	/* No modules where registered */
 	if (!head) { 
-		return ret;
+		return ENOENT;
 	}
 
 	list_for_each(current, head) {
@@ -39,27 +75,7 @@ skip_later:
 	return ret;
 }
 
-void hooked_callback(struct trigger *trigger, void* args, void* data)
-{
-	struct list_head* head = get_module_hooks(trigger->plug_mgr, "default");
- 	int skip_later = 0;
-
-	skip_later = run_hooks(head, 0, args, data);
-
-	if (!skip_later) {
-		trigger->callback(args, data);
-	}
-	skip_later = 0;
-
-	run_hooks(head, 1, args, data);
-}
-
-void register_loop(struct trigger *trigger, loop_t loop)
-{
-	trigger->loop = loop;
-}
-
-void hooked_loop(struct trigger *trigger, void *args)
+static void hooked_loop(struct trigger *trigger, void *args)
 {
 	struct list_head* current;
 	struct list_head* head = get_general_hooks(trigger->plug_mgr);
@@ -80,14 +96,73 @@ void hooked_loop(struct trigger *trigger, void *args)
 	}
 }
 
-void init_trigger(struct trigger* trigger, const char *path)
+int register_callback(struct trigger *trigger, const char *name, callback_t callback)
+{
+	int ret = 0;
+
+	ret = register_module(trigger->plug_mgr, name);
+	if (ret) {
+		printf("Could not register plugin module.");
+		goto error_register;
+	}
+	ret = set_callback(trigger, name, callback);
+	if (ret) {
+		printf("Could not register callback for module.");
+	}
+
+error_register:
+	return ret;
+}
+
+
+int handle_callback(struct trigger *trigger, const char* name, void* args, void* data)
+{
+	struct list_head* head = get_module_hooks(trigger->plug_mgr, name);
+	callback_t callback = 0;
+ 	int ret = -1;
+
+	callback = get_callback(trigger, name);
+	if (!callback) {
+		printf("module '%s' not registered.\n", name);
+		ret = ENOENT;
+		goto error_no_callback;
+	}
+
+	ret = run_hooks(head, 0, args, data);
+	if (!ret) {
+		ret = callback(args, data);
+	}
+	ret = run_hooks(head, 1, args, data);
+
+error_no_callback:
+	return ret;
+}
+
+void register_loop(struct trigger *trigger, loop_t loop)
+{
+	trigger->loop = loop;
+}
+
+int init_trigger(struct trigger* trigger, const char *path)
 {
 	trigger->plug_mgr = init_plugin_manager(path);
+	if (!trigger->plug_mgr) {
+		return -1;
+	}
+	return 0;
 }
 
 void destory_trigger(struct trigger *trigger)
 {
+	struct callbacks_table *item, *tmp;
+
 	destroy_plugin_manager(trigger->plug_mgr);
+
+	/* free callbacks table */
+	HASH_ITER(hh, trigger->callbacks, item, tmp) {
+		HASH_DEL(trigger->callbacks, item);
+		free(item);
+	}
 }
 
 int run_trigger(struct trigger* trigger, void *args)
