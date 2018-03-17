@@ -4,29 +4,29 @@ struct callback_data {
 	int current;
 };
 
-int init_hook(void* args)
+int init_hook(void *args)
 {
 	printf("foo\n");
 	return 0;
 }
 
-int exit_hook(void* args)
+int exit_hook(void *args)
 {
 	printf("bar\n");
 	return 0;
 }
 
-int pre_default_hook(void* args, void* data)
+int pre_default_hook(void *args, void *data)
 {
-	struct callback_data *cdata = (struct callback_data*)data;
+	struct callback_data *cdata = (struct callback_data *)data;
 
 	printf("pre_foo_%d\n", cdata->current);
 	return 0;
 }
 
-int post_default_hook(void* args, void* data)
+int post_default_hook(void *args, void *data)
 {
-	struct callback_data *cdata = (struct callback_data*)data;
+	struct callback_data *cdata = (struct callback_data *)data;
 
 	printf("post_foo_%d\n", cdata->current);
 	return 0;
@@ -38,7 +38,7 @@ struct general_hook ptrig_hooks = {
 	.exit_hook = exit_hook
 };
 
-struct module_hook ptrig_default_hooks = { 
+struct module_hook ptrig_default_hooks = {
 	.pre_hook = pre_default_hook,
 	.post_hook = post_default_hook
 };

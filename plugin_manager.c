@@ -7,8 +7,7 @@
 
 #include "plugin_manager.h"
 
-struct plugin_manager
-{
+struct plugin_manager {
 	int num_plugins;
 	char plugins_dir[PATH_MAX];
 	struct module_hooks_table *m_hooks_table;
@@ -30,21 +29,23 @@ struct plugin_manager *init_plugin_manager(const char *path)
 	strncpy(handle->plugins_dir, path, PATH_MAX);
 	handle->plugins_dir[PATH_MAX - 1] = '\0';
 
+	handle->num_plugins = 0;
+	handle->m_hooks_table = NULL;
+
 	/* Initialize the list of general hooks (init, exit) */
 	INIT_LIST_HEAD(&handle->g_hooks_node.list);
 
 	return handle;
 }
 
-static void destroy_plugin(struct general_hooks_node* g_hooks_node)
+static void destroy_plugin(struct general_hooks_node *g_hooks_node)
 {
 	if (g_hooks_node) {
 		fprintf(stderr, "destroying plugin '%s'\n",
 				g_hooks_node->g_hook->name);
 		/* close the dynamic library imported */
-		if (g_hooks_node->dl_handle) {
+		if (g_hooks_node->dl_handle)
 			dlclose(g_hooks_node->dl_handle);
-		}
 		/* Remove the plugin node from general hooks list and free it */
 		list_del(&g_hooks_node->list);
 		free(g_hooks_node);
@@ -53,15 +54,19 @@ static void destroy_plugin(struct general_hooks_node* g_hooks_node)
 
 int destroy_plugin_manager(struct plugin_manager *mgr)
 {
-	struct list_head *g_pos, *g_tmp;
- 	struct general_hooks_node *curr_g_hook;
- 	struct module_hooks_node *curr_m_hook;
-	struct module_hooks_table *current_item, *m_tmp;
+	struct list_head *g_pos = NULL;
+	struct list_head *g_tmp = NULL;
+	struct general_hooks_node *curr_g_hook = NULL;
+	struct module_hooks_node *curr_m_hook = NULL;
+	struct module_hooks_table *current_item = NULL;
+	struct module_hooks_table *m_tmp = NULL;
 
-	/* free module hooks in hash table for each table item there is a list */
+	/* free module hooks in hash table, for each item there is a list */
 	HASH_ITER(hh, mgr->m_hooks_table, current_item, m_tmp) {
-		list_for_each_safe(g_pos, g_tmp, &current_item->m_hooks_node.list) {
-			curr_m_hook = list_entry(g_pos, struct module_hooks_node, list);
+		list_for_each_safe(g_pos, g_tmp,
+				&current_item->m_hooks_node.list) {
+			curr_m_hook = list_entry(
+					g_pos, struct module_hooks_node, list);
 			list_del(&curr_m_hook->list);
 			free(curr_m_hook);
 		}
@@ -71,7 +76,8 @@ int destroy_plugin_manager(struct plugin_manager *mgr)
 
 	/* free general hooks */
 	list_for_each_safe(g_pos, g_tmp, &mgr->g_hooks_node.list) {
-		curr_g_hook = list_entry(g_pos, struct general_hooks_node, list);
+		curr_g_hook = list_entry(
+				g_pos, struct general_hooks_node, list);
 		destroy_plugin(curr_g_hook);
 	}
 
@@ -82,7 +88,7 @@ int destroy_plugin_manager(struct plugin_manager *mgr)
 
 int register_module(struct plugin_manager *mgr, const char *name)
 {
-	struct module_hooks_table *m_hooks_table;
+	struct module_hooks_table *m_hooks_table = NULL;
 
 	/* If name was not given we cannot register module */
 	if (!name || sizeof(name) == 0) {
@@ -92,9 +98,8 @@ int register_module(struct plugin_manager *mgr, const char *name)
 
 	/* Check if module already registered */
 	HASH_FIND_STR(mgr->m_hooks_table, name, m_hooks_table);
-	if (m_hooks_table) {
+	if (m_hooks_table)
 		return 0;
-	}
 
 	m_hooks_table = (struct module_hooks_table *)
 			calloc(1, sizeof(struct module_hooks_table));
@@ -117,13 +122,12 @@ int register_module(struct plugin_manager *mgr, const char *name)
 struct list_head *
 get_module_hooks(struct plugin_manager *mgr, const char *name)
 {
-	struct module_hooks_table *found;
+	struct module_hooks_table *found = NULL;
 
 	/* Find and put table item with key=name in found */
 	HASH_FIND_STR(mgr->m_hooks_table, name, found);
-	if (found) {
+	if (found)
 		return &found->m_hooks_node.list;
-	}
 	return NULL;
 }
 
@@ -134,7 +138,7 @@ struct list_head *get_general_hooks(struct plugin_manager *mgr)
 
 static int load_general_hooks(struct plugin_manager *mgr, void *plugin_handle)
 {
-	struct general_hooks_node *g_hooks_node;
+	struct general_hooks_node *g_hooks_node = NULL;
 
 	g_hooks_node = calloc(1, sizeof(struct general_hooks_node));
 	if (!g_hooks_node) {
@@ -142,7 +146,8 @@ static int load_general_hooks(struct plugin_manager *mgr, void *plugin_handle)
 		return -1;
 	}
 
-	g_hooks_node->g_hook = (struct general_hook *)dlsym(plugin_handle, GENERAL_HOOKS_STRUCT);
+	g_hooks_node->g_hook = (struct general_hook *)
+			dlsym(plugin_handle, GENERAL_HOOKS_STRUCT);
 	if (!g_hooks_node->g_hook)  {
 		fprintf(stderr, "%s\n", dlerror());
 		free(g_hooks_node);
@@ -151,14 +156,15 @@ static int load_general_hooks(struct plugin_manager *mgr, void *plugin_handle)
 
 	/* Add the general hook node to the end of the list */
 	list_add_tail(&g_hooks_node->list, &mgr->g_hooks_node.list);
-	
+
 	return 0;
 }
 
-static int load_module_hooks(struct module_hooks_table *module_item, void *plugin_handle)
+static int
+load_module_hooks(struct module_hooks_table *module_item, void *plugin_handle)
 {
-	struct module_hooks_node *m_hooks_node;
-	char field_name[MAX_HOOK_STRUCT_NAME];
+	struct module_hooks_node *m_hooks_node = NULL;
+	char field_name[MAX_HOOK_STRUCT_NAME] = {0};
 
 	m_hooks_node = calloc(1, sizeof(struct module_hooks_node));
 	if (!m_hooks_node) {
@@ -166,28 +172,31 @@ static int load_module_hooks(struct module_hooks_table *module_item, void *plugi
 		return -1;
 	}
 
-	/* We are not afraid of truncation because the buffer here always fits */
-	snprintf(field_name, MAX_HOOK_STRUCT_NAME, MODULE_HOOK_STRUCT("%s"), module_item->name);
+	/* We are not afraid of truncation as the buffer here always fits */
+	snprintf(field_name, MAX_HOOK_STRUCT_NAME, MODULE_HOOK_STRUCT("%s"),
+			module_item->name);
 	field_name[MAX_HOOK_STRUCT_NAME - 1] = '\0';
 
-	m_hooks_node->m_hook = (struct module_hook *)dlsym(plugin_handle, field_name);
+	m_hooks_node->m_hook = (struct module_hook *)
+			dlsym(plugin_handle, field_name);
 	if (!m_hooks_node->m_hook)  {
 		fprintf(stderr, "%s\n", dlerror());
 		free(m_hooks_node);
 		return 0;
 	}
 
-	/* Add the module hook node to the end of the list in appropriate table item */
+	/* Add the module hook node to the end of the list in a table item */
 	list_add_tail(&m_hooks_node->list, &module_item->m_hooks_node.list);
-	
+
 	return 0;
 }
 
 static int load_plugin(struct plugin_manager *mgr, const char *path)
 {
 	int ret = 0;
-	void *plugin_handle;
-	struct module_hooks_table *current_hook, *m_tmp;
+	void *plugin_handle = NULL;
+	struct module_hooks_table *current_hook = NULL;
+	struct module_hooks_table *m_tmp = NULL;
 
 	plugin_handle = dlopen(path, RTLD_NOW);
 	if (!plugin_handle) {
@@ -198,16 +207,18 @@ static int load_plugin(struct plugin_manager *mgr, const char *path)
 	dlerror();
 
 	/* Load all general hooks from given plugin .so */
-	if(load_general_hooks(mgr, plugin_handle)) {
+	if (load_general_hooks(mgr, plugin_handle)) {
 		dlclose(plugin_handle);
 		goto error_load_general_hooks;
 	}
 
 	/* For each registered module loads its hooks from plugin .so */
 	HASH_ITER(hh, mgr->m_hooks_table, current_hook, m_tmp) {
-		if(load_module_hooks(current_hook, plugin_handle)) {
-			/* If we fail we also want to destroy the general hooks
-			*and discard the plugin altogether.*/
+		if (load_module_hooks(current_hook, plugin_handle)) {
+			/* If we fail we also want to destroy the
+			 * general hooks and discard the plugin
+			 * altogether.
+			 */
 			destroy_plugin(list_entry(mgr->g_hooks_node.list.prev,
 					struct general_hooks_node, list));
 			ret = -1;
@@ -230,21 +241,20 @@ int load_plugins(struct plugin_manager *mgr)
 
 	/* Scan all .so in path and load plugins */
 	root = opendir(mgr->plugins_dir);
-	if (!root) {
+	if (!root)
 		return 0;
-	}
+
 	while ((dir = readdir(root))) {
 		dot = strrchr(dir->d_name, '.');
 		if (dot && !strcmp(dot, ".so")) {
 			ret = snprintf(full_path, PATH_MAX, "%s/%s",
 					mgr->plugins_dir, dir->d_name);
 			full_path[PATH_MAX - 1] = '\0';
-			if(ret < 0) {
-				fprintf(stderr, "load_plugins: Out of memory\n");
+			if (ret < 0) {
+				fprintf(stderr, "%s: No memory\n", __func__);
 			} else {
-				if (load_plugin(mgr, full_path)) {
+				if (load_plugin(mgr, full_path))
 					goto error_load_plugin;
-				}
 				mgr->num_plugins++;
 			}
 		}

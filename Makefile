@@ -18,7 +18,7 @@ $(LIB): $(LIB).$(VERSION)
 	ln -sf $(LIB).$(MAJOR) $@
 
 $(LIB).$(VERSION): $(LIB_OBJS)
-	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) -shared -Wl,-soname,$(LIB).$(MAJOR)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) -rdynamic -shared -Wl,-soname,$(LIB).$(MAJOR)
 
 rebuild: clean all
 
